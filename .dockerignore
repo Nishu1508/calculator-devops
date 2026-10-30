@@ -1,0 +1,21 @@
+# Keep the build context small and free of secrets: only pom.xml and src/ are needed.
+.git
+.gitignore
+.gitattributes
+target/
+.mvn/
+mvnw
+mvnw.cmd
+*.md
+Jenkinsfile
+docker-compose*.yml
+compose*.yaml
+nginx/
+jenkins/
+docs/
+.idea/
+.vscode/
+*.iml
+.env
+.env.*
+*.log
