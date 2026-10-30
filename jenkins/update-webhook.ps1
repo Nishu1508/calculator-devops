@@ -18,7 +18,8 @@ $ErrorActionPreference = 'Stop'
 # 1. Find the tunnel URL in the cloudflared logs (wait up to ~60 s for it to appear).
 $url = $null
 for ($i = 0; $i -lt 30 -and -not $url; $i++) {
-    $logs = docker logs jenkins-tunnel 2>&1 | Out-String
+    # via cmd so cloudflared's stderr log lines are not treated as PowerShell errors
+    $logs = cmd /c "docker logs jenkins-tunnel 2>&1" | Out-String
     $m = [regex]::Matches($logs, 'https://[a-z0-9-]+\.trycloudflare\.com')
     if ($m.Count -gt 0) { $url = $m[$m.Count - 1].Value } else { Start-Sleep 2 }
 }
@@ -27,7 +28,8 @@ $hookUrl = "$url/github-webhook/"
 Write-Host "Jenkins public webhook URL: $hookUrl" -ForegroundColor Cyan
 
 # 2. Create the webhook, or update the existing Jenkins one.
-$hooks = gh api "repos/$Repo/hooks" | ConvertFrom-Json
+$hooks = @(gh api "repos/$Repo/hooks" | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0) { throw 'gh api failed - is the GitHub CLI logged in? (gh auth status)' }
 $existing = $hooks | Where-Object { $_.config.url -match '/github-webhook/$' } | Select-Object -First 1
 
 $body = @{
