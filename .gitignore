@@ -1,0 +1,56 @@
+### Maven / build output ###
+target/
+!.mvn/wrapper/maven-wrapper.properties
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+HELP.md
+*.log
+logs/
+
+### Secrets & local environment (never commit these) ###
+.env
+.env.*
+*.env
+secrets/
+*.pem
+*.key
+*.p12
+*.jks
+credentials*.json
+settings-security.xml
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Eclipse / STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### OS files ###
+.DS_Store
+Thumbs.db
+desktop.ini
