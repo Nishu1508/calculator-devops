@@ -1,4 +1,4 @@
-# Full stack: 2 x calculator API replicas behind an Nginx reverse proxy.
+﻿# Full stack: 2 x calculator API replicas behind an Nginx reverse proxy.
 #
 #   docker compose up -d            # start (pulls the image from Docker Hub if not present)
 #   docker compose ps               # status + health
@@ -15,7 +15,7 @@ name: calculator
 
 services:
   calculator:
-    image: ${DOCKERHUB_USER:-nishu1508}/calculator-api:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER:-navish1508}/calculator-api:${IMAGE_TAG:-latest}
     build: .
     deploy:
       replicas: 2                       # second replica behind the proxy
