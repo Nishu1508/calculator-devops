@@ -1,0 +1,87 @@
+# Jenkins Configuration as Code (JCasC).
+# Applied on every Jenkins start-up. Secrets are NOT stored here: ${...} values are resolved from
+# environment variables (jenkins/.env) or Docker secrets mounted at /run/secrets/<name>.
+
+jenkins:
+  systemMessage: "CSE 816 SPE - Calculator REST API CI/CD (configured as code)"
+  numExecutors: 2
+  mode: NORMAL
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID:-admin}"
+          name: "Jenkins Admin"
+          password: "${jenkins_admin_password}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  globalNodeProperties:
+    - envVars:
+        env:
+          # Docker Hub namespace used by the Jenkinsfile to name the image
+          - key: DOCKERHUB_USER
+            value: "${DOCKERHUB_USERNAME}"
+          - key: NOTIFY_EMAIL
+            value: "${NOTIFY_EMAIL}"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # Used by the Push stage via withCredentials(...) - never hard-coded in the Jenkinsfile
+          - usernamePassword:
+              scope: GLOBAL
+              id: "dockerhub-credentials"
+              description: "Docker Hub username + access token"
+              username: "${DOCKERHUB_USERNAME}"
+              password: "${dockerhub_token}"
+          # Gmail SMTP login (App Password) used for build notifications
+          - usernamePassword:
+              scope: GLOBAL
+              id: "gmail-smtp"
+              description: "Gmail SMTP (App Password) for email notifications"
+              username: "${SMTP_USERNAME}"
+              password: "${smtp_app_password}"
+
+unclassified:
+  location:
+    url: "${JENKINS_URL:-http://localhost:8080/}"
+    adminAddress: "Jenkins CI <${SMTP_USERNAME}>"
+  email-ext:
+    mailAccount:
+      smtpHost: "smtp.gmail.com"
+      smtpPort: "587"
+      useTls: true
+      credentialsId: "gmail-smtp"
+    defaultContentType: "text/html"
+    defaultSubject: "$PROJECT_NAME - Build #$BUILD_NUMBER - $BUILD_STATUS"
+    defaultBody: "$DEFAULT_CONTENT"
+
+jobs:
+  - script: |
+      pipelineJob('calculator-pipeline') {
+        displayName('Calculator CI/CD Pipeline')
+        description('Checkout -> Build -> Test -> Docker Build -> Push -> Deploy for the Calculator REST API. Defined by the Jenkinsfile in the repository.')
+        properties {
+          githubProjectUrl('${GITHUB_REPO_URL}')
+          disableConcurrentBuilds()
+        }
+        logRotator {
+          numToKeep(30)
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${GITHUB_REPO_URL}.git')
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
