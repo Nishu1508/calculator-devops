@@ -30,6 +30,9 @@ pipeline {
         IMAGE_TAG     = "${env.BUILD_NUMBER}"
         // Per-build Docker client config, so the Docker Hub login is never left in JENKINS_HOME.
         DOCKER_CONFIG = "${env.WORKSPACE}@tmp/docker-config"
+        // Reproducible image IDs: without default provenance attestations an unchanged (cached)
+        // rebuild yields the same image ID, so redeploys do not needlessly re-tag the Nginx image.
+        BUILDX_NO_DEFAULT_ATTESTATIONS = '1'
     }
 
     stages {
