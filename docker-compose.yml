@@ -1,0 +1,68 @@
+# Full stack: 2 x calculator API replicas behind an Nginx reverse proxy.
+#
+#   docker compose up -d            # start (pulls the image from Docker Hub if not present)
+#   docker compose ps               # status + health
+#   docker compose down             # stop and remove
+#
+# Variables (with defaults) can be overridden from the shell or a local .env file (git-ignored):
+#   DOCKERHUB_USER  Docker Hub namespace of the image
+#   IMAGE_TAG       image tag to deploy (Jenkins sets this to the build number)
+#   PROXY_PORT      host port of the Nginx proxy
+
+# Fixed project name -> every deploy (local or Jenkins) targets the SAME stack, so re-runs
+# update it in place instead of creating a second copy. This is what makes deploys idempotent.
+name: calculator
+
+services:
+  calculator:
+    image: ${DOCKERHUB_USER:-nishu1508}/calculator-api:${IMAGE_TAG:-latest}
+    build: .
+    deploy:
+      replicas: 2                       # second replica behind the proxy
+      resources:
+        limits:
+          memory: 512m
+    environment:
+      SERVER_PORT: "8080"
+      APP_ENV: ${APP_ENV:-production}
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+    expose:
+      - "8080"                          # reachable only from inside the backend network
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  nginx:
+    image: calculator-nginx:latest
+    build: ./nginx
+    ports:
+      - "${PROXY_PORT:-8081}:8080"      # the only port published to the host
+    environment:
+      TZ: ${TZ:-Asia/Kolkata}
+    depends_on:
+      calculator:
+        condition: service_healthy      # start the proxy only once the API is healthy
+        restart: true                   # restart proxy when the API is recreated
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  frontend:                             # public side: host -> nginx
+    name: calculator-frontend
+  backend:                              # private side: nginx -> API replicas (no internet access)
+    name: calculator-backend
+    internal: true
